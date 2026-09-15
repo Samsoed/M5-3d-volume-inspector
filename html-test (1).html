@@ -1,0 +1,2579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Volume Inspector</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f5f7;
+  color: #222;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.screen {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  width: min(1100px, 100%);
+  margin: auto;
+}
+
+.card {
+  background: white;
+  border-radius: 18px;
+  padding: 25px;
+  box-shadow: 0 5px 20px rgba(0,0,0,.08);
+}
+
+h1 {
+  text-align: center;
+  margin-top: 5px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background: #1976d2;
+  color: white;
+}
+
+button:hover {
+  opacity: .9;
+}
+
+.start-button {
+  display: block;
+  margin: 25px auto;
+  font-size: 20px;
+  padding: 15px 35px;
+}
+
+.leaderboard {
+  margin-top: 25px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: center;
+}
+
+th {
+  background: #f0f2f4;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.timer {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.progress {
+  display: flex;
+  gap: 8px;
+  margin: 15px 0;
+}
+
+.progress-box {
+  flex: 1;
+  height: 12px;
+  border-radius: 8px;
+  background: #ddd;
+}
+
+.progress-box.done {
+  background: #32a852;
+}
+
+.shape-title {
+  text-align: center;
+  font-size: 25px;
+  font-weight: bold;
+  margin: 10px;
+}
+
+.viewport {
+  position: relative;
+  width: 100%;
+  height: min(65vh, 600px);
+  min-height: 380px;
+  background:
+    radial-gradient(circle at center, #ffffff 0%, #eef1f4 100%);
+  border-radius: 15px;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.dimension-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: rgba(255,255,255,.95);
+  border: 2px solid #e53935;
+  color: #222;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0,0,0,.12);
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.answer-area {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.answer-area input {
+  width: min(400px, 90%);
+  padding: 13px;
+  font-size: 18px;
+  border: 2px solid #bbb;
+  border-radius: 9px;
+  text-align: center;
+}
+
+.feedback {
+  min-height: 28px;
+  margin-top: 12px;
+  font-weight: bold;
+}
+
+.correct {
+  color: #219653;
+}
+
+.incorrect {
+  color: #d32f2f;
+}
+
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.modal {
+  width: min(450px, 100%);
+  background: white;
+  border-radius: 18px;
+  padding: 30px;
+  text-align: center;
+}
+
+.modal input {
+  width: 100%;
+  padding: 13px;
+  font-size: 18px;
+  margin: 15px 0;
+  border: 2px solid #bbb;
+  border-radius: 8px;
+}
+
+.thank-you {
+  text-align: center;
+  font-size: 25px;
+  font-weight: bold;
+  margin: 20px;
+}
+
+.your-result {
+  margin: 15px auto 20px;
+  padding: 14px 18px;
+  max-width: 500px;
+  background: #e3f2fd;
+  border: 2px solid #1976d2;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.your-result .rank {
+  font-size: 28px;
+  color: #1976d2;
+  margin: 5px 0;
+}
+
+.your-result .time {
+  font-size: 16px;
+  margin-top: 4px;
+  font-weight: normal;
+}
+
+@media(max-width:600px) {
+  .screen {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .viewport {
+    height: 55vh;
+    min-height: 330px;
+  }
+
+  .dimension-label {
+    font-size: 12px;
+    padding: 3px 5px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- =========================================================
+     START SCREEN
+========================================================= -->
+
+<section id="startScreen" class="screen">
+  <div class="container">
+
+    <div class="card">
+      <h1>3D Volume Inspector</h1>
+
+      <p style="text-align:center">
+        Inspect each 3D solid, identify its dimensions,
+        and calculate its volume as accurately and quickly as possible.
+      </p>
+
+<button
+  id="startButton"
+  class="start-button"
+  type="button">
+  Start
+</button>
+
+      <div class="leaderboard">
+        <h2>All-Time Fastest 10</h2>
+        <div id="startLeaderboard"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- =========================================================
+     TASK SCREEN
+========================================================= -->
+
+<section id="taskScreen" class="screen hidden">
+
+  <div class="container">
+
+    <div class="card">
+
+      <div class="task-header">
+        <strong id="taskNumber">Shape 1 of 5</strong>
+        <div class="timer" id="timer">00:00.0</div>
+      </div>
+
+      <div class="progress">
+        <div class="progress-box" id="progress1"></div>
+        <div class="progress-box" id="progress2"></div>
+        <div class="progress-box" id="progress3"></div>
+        <div class="progress-box" id="progress4"></div>
+        <div class="progress-box" id="progress5"></div>
+      </div>
+
+      <div class="shape-title" id="shapeName">
+        Cube
+      </div>
+
+      <div class="viewport" id="viewport">
+
+        <canvas id="canvas"></canvas>
+
+        <div class="labels" id="labels"></div>
+
+      </div>
+
+      <div class="controls">
+        <button id="resetButton">
+          Reset View
+        </button>
+      </div>
+
+      <div class="answer-area">
+
+        <p>
+          Calculate the volume in cm³
+        </p>
+
+        <input
+          id="answer"
+          type="number"
+          step="any"
+          placeholder="Enter volume"
+        >
+
+        <br><br>
+
+        <button id="checkButton">
+          Check Answer
+        </button>
+
+        <div id="feedback" class="feedback"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =========================================================
+     FINAL SCREEN
+========================================================= -->
+
+<section id="finalScreen" class="screen hidden">
+
+  <div class="container">
+
+    <div class="card">
+
+      <div class="thank-you">
+        Thank You! 🎉
+      </div>
+
+      <p style="text-align:center">
+        Your result has been recorded.
+      </p>
+
+      <div class="leaderboard">
+        <h2>All-Time Fastest 10</h2>
+        <div id="yourResult" class="your-result"></div>
+        <div id="finalLeaderboard"></div>
+      </div>
+
+      <div style="text-align:center;margin-top:25px">
+        <button id="backButton">
+          Back to Start
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =========================================================
+     NAME MODAL
+========================================================= -->
+
+<div id="nameModal" class="modal-bg hidden">
+
+  <div class="modal">
+
+    <h2>All 5 Shapes Completed!</h2>
+
+    <p>
+      Completion Time:
+    </p>
+
+    <strong id="completionTime">
+      00:00.0
+    </strong>
+
+    <h3>Enter Your Name</h3>
+
+    <input
+      id="studentName"
+      type="text"
+      maxlength="40"
+      placeholder="Your name"
+    >
+
+    <button id="submitButton">
+      Submit
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+/* magic number */
+
+const DEBUG_MAGIC_NUMBER = 3141592653589793;
+
+/* =========================================================
+   GOOGLE SHEETS
+========================================================= */
+
+const SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzT1xWbyLY4J-P74baxqh8CHJpKpsyr_OPG8gy8Qdjh2-bEyT_szgn5f2iOIZ4z-ga9/exec";
+
+
+/* =========================================================
+   DOM HELPERS
+========================================================= */
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let currentShape = null;
+let currentShapeIndex = 0;
+
+let completedShapes = new Set();
+
+let taskStartTime = 0;
+let elapsedMs = 0;
+let timerId = null;
+
+/* =========================================================
+   LEADERBOARD — GOOGLE SHEETS
+========================================================= */
+
+async function loadScores() {
+
+  try {
+
+    const response =
+      await fetch(
+        SHEET_SCRIPT_URL + "?action=leaderboard"
+      );
+
+    const data =
+      await response.json();
+
+    if (
+      !data.success ||
+      !Array.isArray(data.scores)
+    ) {
+      return [];
+    }
+
+    return data.scores
+      .map(score => ({
+        name: String(score.name),
+        time: Number(score.time)
+      }))
+      .filter(
+        score =>
+          score.name &&
+          Number.isFinite(score.time)
+      );
+
+  } catch(error) {
+
+    console.log(
+      "Could not load shared leaderboard:",
+      error
+    );
+
+    return [];
+  }
+}
+
+async function loadAllScores() {
+
+  try {
+
+    const response =
+      await fetch(
+        SHEET_SCRIPT_URL + "?action=all"
+      );
+
+    const data =
+      await response.json();
+
+    if (
+      !data.success ||
+      !Array.isArray(data.scores)
+    ) {
+      return [];
+    }
+
+    return data.scores
+      .map(score => ({
+        name: String(score.name),
+        time: Number(score.time)
+      }))
+      .filter(
+        score =>
+          score.name &&
+          Number.isFinite(score.time)
+      )
+      .sort(
+        (a,b) => a.time - b.time
+      );
+
+  } catch(error) {
+
+    console.log(
+      "Could not load all scores:",
+      error
+    );
+
+    return [];
+  }
+}
+
+
+function calculateRank(
+  allScores,
+  myTime
+) {
+
+  // Rank based on time.
+  // Everyone with a faster time is ahead.
+
+  return (
+    allScores.filter(
+      score =>
+        score.time < myTime
+    ).length
+    + 1
+  );
+}
+
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
+
+function escapeHtml(text) {
+
+  const div =
+    document.createElement("div");
+
+  div.textContent = text;
+
+  return div.innerHTML;
+}
+
+
+/* =========================================================
+   RENDER LEADERBOARD
+========================================================= */
+
+function renderLeaderboard(container) {
+
+  if (!container) {
+    return;
+  }
+
+  if (scores.length === 0) {
+
+    container.innerHTML =
+      "<p style='text-align:center'>No scores yet.</p>";
+
+    return;
+  }
+
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Student</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  scores.forEach((score, index) => {
+
+    html += `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(score.name)}</td>
+        <td>${score.time.toFixed(2)} s</td>
+      </tr>
+    `;
+
+  });
+
+  html += `
+      </tbody>
+    </table>
+  `;
+
+  container.innerHTML = html;
+}
+
+
+/* =========================================================
+   GOOGLE SHEETS
+========================================================= */
+
+async function sendToGoogleSheets(name, seconds) {
+
+  if (!SHEET_SCRIPT_URL) {
+    return;
+  }
+
+  const data = {
+
+    name: name,
+
+    shape: "All 5 Shapes",
+
+    dimensions: "5-shape challenge",
+
+    answer: "Completed",
+
+    time: seconds,
+
+    status: "Completed"
+  };
+
+  try {
+
+    await fetch(
+      SHEET_SCRIPT_URL,
+      {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type":
+            "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(data)
+      }
+    );
+
+  } catch(error) {
+
+    console.log(
+      "Google Sheets error:",
+      error
+    );
+  }
+}
+
+
+/* =========================================================
+   INITIAL SCORE DATA
+========================================================= */
+
+let scores = [];
+
+/* =========================================================
+   SHAPE DEFINITIONS
+========================================================= */
+
+const shapeNames = [
+  "Cube",
+  "Rectangular Prism",
+  "Pyramid",
+  "Cylinder",
+  "Cone"
+];
+
+
+/* =========================================================
+   RANDOM HELPERS
+========================================================= */
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomMultiple(min, max, step) {
+  const count = Math.floor((max - min) / step);
+  return min + randomInt(0, count) * step;
+}
+
+
+/* =========================================================
+   GENERATE SHAPE
+========================================================= */
+
+function generateShape(type) {
+
+  if (type === "Cube") {
+
+    const s = randomInt(3, 12);
+
+    return {
+      type,
+      side: s,
+      volume: s * s * s
+    };
+  }
+
+
+  if (type === "Rectangular Prism") {
+
+    const L = randomInt(4, 15);
+    const W = randomInt(3, 12);
+    const H = randomInt(3, 12);
+
+    return {
+      type,
+      length: L,
+      width: W,
+      height: H,
+      volume: L * W * H
+    };
+  }
+
+
+  if (type === "Pyramid") {
+
+    const L = randomInt(4, 14);
+    const W = randomInt(3, 10);
+    const H = randomMultiple(3, 15, 3);
+
+    return {
+      type,
+      length: L,
+      width: W,
+      height: H,
+      volume: (L * W * H) / 3
+    };
+  }
+
+
+  if (type === "Cylinder") {
+
+    const r = randomMultiple(7, 28, 7);
+    const H = randomInt(4, 15);
+
+    return {
+      type,
+      radius: r,
+      height: H,
+      volume: Math.PI * r * r * H
+    };
+  }
+
+
+  if (type === "Cone") {
+
+    const r = randomMultiple(7, 28, 7);
+    const H = randomMultiple(3, 15, 3);
+
+    return {
+      type,
+      radius: r,
+      height: H,
+      volume: Math.PI * r * r * H / 3
+    };
+  }
+
+}
+
+
+/* =========================================================
+   FORMAT TIME
+========================================================= */
+
+function formatTime(ms) {
+
+  const totalSeconds = ms / 1000;
+
+  const minutes =
+    Math.floor(totalSeconds / 60);
+
+  const seconds =
+    totalSeconds % 60;
+
+  return (
+    String(minutes).padStart(2, "0")
+    + ":"
+    + seconds.toFixed(1).padStart(4, "0")
+  );
+}
+
+
+/* =========================================================
+   START GAME
+========================================================= */
+
+function startTask() {
+
+  $("startScreen").classList.add("hidden");
+  $("finalScreen").classList.add("hidden");
+  $("taskScreen").classList.remove("hidden");
+
+  currentShapeIndex = 0;
+
+  completedShapes = new Set();
+
+  taskStartTime = performance.now();
+
+  startTimer();
+
+  loadCurrentShape();
+}
+
+
+/* =========================================================
+   TIMER
+========================================================= */
+
+function startTimer() {
+
+  clearInterval(timerId);
+
+  timerId = setInterval(() => {
+
+    elapsedMs =
+      performance.now() - taskStartTime;
+
+    $("timer").textContent =
+      formatTime(elapsedMs);
+
+  }, 100);
+}
+
+
+function stopTimer() {
+
+  clearInterval(timerId);
+
+  elapsedMs =
+    performance.now() - taskStartTime;
+
+  $("timer").textContent =
+    formatTime(elapsedMs);
+}
+
+
+/* =========================================================
+   LOAD CURRENT SHAPE
+========================================================= */
+
+function loadCurrentShape() {
+
+  currentShape =
+    generateShape(
+      shapeNames[currentShapeIndex]
+    );
+
+  $("taskNumber").textContent =
+    `Shape ${currentShapeIndex + 1} of 5`;
+
+  $("shapeName").textContent =
+    currentShape.type;
+
+  $("answer").value = "";
+
+  $("feedback").textContent = "";
+
+  $("feedback").className =
+    "feedback";
+
+  updateProgress();
+
+  resetView();
+
+  resizeCanvas();
+
+  drawScene();
+}
+
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+function updateProgress() {
+
+  for (let i = 1; i <= 5; i++) {
+
+    $("progress" + i)
+      .classList.toggle(
+        "done",
+        completedShapes.has(i - 1)
+      );
+  }
+}
+
+
+/* =========================================================
+   CHECK ANSWER
+========================================================= */
+
+function checkAnswer() {
+
+  const input =
+    parseFloat($("answer").value);
+
+  if (!Number.isFinite(input)) {
+
+    $("feedback").textContent =
+      "Please enter an answer.";
+
+    $("feedback").className =
+      "feedback incorrect";
+
+    return;
+  }
+
+  const correct =
+    currentShape.volume;
+
+  const tolerance =
+    Math.max(
+      0.5,
+      Math.abs(correct) * 0.005
+    );
+
+  if (input === DEBUG_MAGIC_NUMBER ||
+      Math.abs(input - correct) <= tolerance) {
+
+    $("feedback").textContent =
+      "Correct! ✓";
+
+    $("feedback").className =
+      "feedback correct";
+
+    completedShapes.add(currentShapeIndex);
+
+    updateProgress();
+
+    setTimeout(() => {
+
+      if (currentShapeIndex >= 4) {
+
+        finishGame();
+
+      } else {
+
+        currentShapeIndex++;
+
+        loadCurrentShape();
+
+      }
+
+    }, 650);
+
+  } else {
+
+    $("feedback").textContent =
+      "Incorrect. Try again.";
+
+    $("feedback").className =
+      "feedback incorrect";
+  }
+}
+
+
+/* =========================================================
+   FINISH GAME
+========================================================= */
+
+function finishGame() {
+
+  stopTimer();
+
+  $("completionTime").textContent =
+    formatTime(elapsedMs);
+
+  $("studentName").value = "";
+
+  $("nameModal").classList.remove("hidden");
+
+  setTimeout(() => {
+    $("studentName").focus();
+  }, 100);
+}
+
+
+/* =========================================================
+   SUBMIT SCORE
+========================================================= */
+
+async function submitScore() {
+
+  const name =
+    $("studentName").value.trim();
+
+  if (!name) {
+
+    alert("Please enter your name.");
+
+    $("studentName").focus();
+
+    return;
+  }
+
+
+  const seconds =
+    elapsedMs / 1000;
+
+
+  // Disable button while submitting
+
+  const submitButton =
+    $("submitButton");
+
+  submitButton.disabled = true;
+
+  submitButton.textContent =
+    "Submitting...";
+
+
+  try {
+
+    // ==========================================
+    // SEND SCORE TO GOOGLE SHEETS
+    // ==========================================
+
+    await sendToGoogleSheets(
+      name,
+      seconds
+    );
+
+
+    // ==========================================
+    // LOAD UPDATED SCHOOL LEADERBOARD
+    // ==========================================
+
+    scores =
+      await loadScores();
+
+
+    // ==========================================
+    // GET ACTUAL RANK
+    // ==========================================
+
+    const allScores =
+      await loadAllScores();
+
+    const myRank =
+      calculateRank(
+        allScores,
+        seconds
+      );
+
+
+    // ==========================================
+    // CLOSE NAME MODAL
+    // ==========================================
+
+    $("nameModal")
+      .classList.add("hidden");
+
+
+    // ==========================================
+    // SHOW FINAL SCREEN
+    // ==========================================
+
+    $("taskScreen")
+      .classList.add("hidden");
+
+    $("finalScreen")
+      .classList.remove("hidden");
+
+
+    // ==========================================
+    // SHOW PERSONAL RESULT
+    // ==========================================
+
+    $("yourResult").innerHTML = `
+      <div>Your Result</div>
+
+      <div class="rank">
+        #${myRank}
+      </div>
+
+      <div>
+        ${escapeHtml(name)}
+      </div>
+
+      <div class="time">
+        ${seconds.toFixed(2)} seconds
+      </div>
+    `;
+
+
+    // ==========================================
+    // SHOW UPDATED TOP 10
+    // ==========================================
+
+    renderLeaderboard(
+      $("finalLeaderboard")
+    );
+
+
+  } catch(error) {
+
+    console.log(
+      "Score submission error:",
+      error
+    );
+
+    alert(
+      "Could not connect to the leaderboard. Please try again."
+    );
+
+  }
+
+
+  submitButton.disabled = false;
+
+  submitButton.textContent =
+    "Submit";
+}
+
+/* =========================================================
+   CANVAS / 3D ENGINE
+========================================================= */
+
+const canvas = $("canvas");
+
+const ctx =
+  canvas.getContext("2d");
+
+const viewport =
+  $("viewport");
+
+let rotationX = -0.45;
+let rotationY = 0.65;
+let zoom = 1;
+
+let isDragging = false;
+
+let previousPointerX = 0;
+let previousPointerY = 0;
+
+
+/* =========================================================
+   RESIZE
+========================================================= */
+
+function resizeCanvas() {
+
+  const rect =
+    viewport.getBoundingClientRect();
+
+  const dpr =
+    window.devicePixelRatio || 1;
+
+  canvas.width =
+    rect.width * dpr;
+
+  canvas.height =
+    rect.height * dpr;
+
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+}
+
+
+/* =========================================================
+   3D MATH
+========================================================= */
+
+function rotatePoint(p) {
+
+  let x = p.x;
+  let y = p.y;
+  let z = p.z;
+
+  const cx =
+    Math.cos(rotationX);
+
+  const sx =
+    Math.sin(rotationX);
+
+  const cy =
+    Math.cos(rotationY);
+
+  const sy =
+    Math.sin(rotationY);
+
+
+  // Rotate X
+
+  let y1 =
+    y * cx - z * sx;
+
+  let z1 =
+    y * sx + z * cx;
+
+
+  // Rotate Y
+
+  let x2 =
+    x * cy + z1 * sy;
+
+  let z2 =
+    -x * sy + z1 * cy;
+
+
+  return {
+    x: x2,
+    y: y1,
+    z: z2
+  };
+}
+
+
+function project(p) {
+
+  const r =
+    rotatePoint(p);
+
+  const rect =
+    viewport.getBoundingClientRect();
+
+  const scale =
+    Math.min(
+      rect.width,
+      rect.height
+    ) * 0.29 * zoom;
+
+  return {
+    x:
+      rect.width / 2 +
+      r.x * scale,
+
+    y:
+      rect.height / 2 -
+      r.y * scale,
+
+    z:
+      r.z
+  };
+}
+
+
+/* =========================================================
+   LINE DRAWING
+========================================================= */
+
+function drawLine(
+  a,
+  b,
+  color = "#263238",
+  width = 2
+) {
+
+  ctx.beginPath();
+
+  ctx.moveTo(a.x, a.y);
+
+  ctx.lineTo(b.x, b.y);
+
+  ctx.strokeStyle = color;
+
+  ctx.lineWidth = width;
+
+  ctx.stroke();
+}
+
+
+/* =========================================================
+   RED DIMENSION LINE
+========================================================= */
+
+function drawDimensionLine(
+  a3,
+  b3
+) {
+
+  const a =
+    project(a3);
+
+  const b =
+    project(b3);
+
+  const color =
+    "#e53935";
+
+  drawLine(
+    a,
+    b,
+    color,
+    3
+  );
+
+  drawArrowHead(
+    a,
+    b,
+    color
+  );
+
+  drawArrowHead(
+    b,
+    a,
+    color
+  );
+
+  return {
+    a,
+    b
+  };
+}
+
+
+function drawArrowHead(
+  tip,
+  from,
+  color
+) {
+
+  const angle =
+    Math.atan2(
+      tip.y - from.y,
+      tip.x - from.x
+    );
+
+  const size = 8;
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    tip.x,
+    tip.y
+  );
+
+  ctx.lineTo(
+    tip.x -
+      size * Math.cos(angle - Math.PI / 6),
+
+    tip.y -
+      size * Math.sin(angle - Math.PI / 6)
+  );
+
+  ctx.moveTo(
+    tip.x,
+    tip.y
+  );
+
+  ctx.lineTo(
+    tip.x -
+      size * Math.cos(angle + Math.PI / 6),
+
+    tip.y -
+      size * Math.sin(angle + Math.PI / 6)
+  );
+
+  ctx.strokeStyle =
+    color;
+
+  ctx.lineWidth = 3;
+
+  ctx.stroke();
+}
+
+
+/* =========================================================
+   EDGE HELPERS
+========================================================= */
+
+function boxVertices(
+  L,
+  H,
+  W
+) {
+
+  const x = L / 2;
+  const y = H / 2;
+  const z = W / 2;
+
+  return [
+    {x:-x,y:-y,z:-z},
+    {x:x,y:-y,z:-z},
+    {x:x,y:y,z:-z},
+    {x:-x,y:y,z:-z},
+
+    {x:-x,y:-y,z:z},
+    {x:x,y:-y,z:z},
+    {x:x,y:y,z:z},
+    {x:-x,y:y,z:z}
+  ];
+}
+
+
+function drawBox(
+  L,
+  H,
+  W
+) {
+
+  const v =
+    boxVertices(L,H,W);
+
+  const edges = [
+
+    [0,1],
+    [1,2],
+    [2,3],
+    [3,0],
+
+    [4,5],
+    [5,6],
+    [6,7],
+    [7,4],
+
+    [0,4],
+    [1,5],
+    [2,6],
+    [3,7]
+  ];
+
+  edges.forEach(e => {
+
+    drawLine(
+      project(v[e[0]]),
+      project(v[e[1]])
+    );
+
+  });
+
+  return v;
+}
+
+
+/* =========================================================
+   PYRAMID
+========================================================= */
+
+function drawPyramid(
+  L,
+  H,
+  W
+) {
+
+  const v =
+    boxVertices(L,0,W);
+
+  const baseY =
+    -H / 2;
+
+  const base = [
+    {x:-L/2,y:baseY,z:-W/2},
+    {x:L/2,y:baseY,z:-W/2},
+    {x:L/2,y:baseY,z:W/2},
+    {x:-L/2,y:baseY,z:W/2}
+  ];
+
+  const apex = {
+    x:0,
+    y:H/2,
+    z:0
+  };
+
+  for(let i=0;i<4;i++){
+
+    drawLine(
+      project(base[i]),
+      project(base[(i+1)%4])
+    );
+
+    drawLine(
+      project(base[i]),
+      project(apex)
+    );
+  }
+
+  return {
+    base,
+    apex
+  };
+}
+
+
+/* =========================================================
+   CIRCULAR POINTS
+========================================================= */
+
+function circularPoints(
+  radius,
+  y,
+  count = 64
+) {
+
+  const points = [];
+
+  for(let i=0;i<count;i++){
+
+    const a =
+      i / count * Math.PI * 2;
+
+    points.push({
+      x:
+        radius * Math.cos(a),
+
+      y,
+
+      z:
+        radius * Math.sin(a)
+    });
+
+  }
+
+  return points;
+}
+
+
+/* =========================================================
+   CYLINDER
+========================================================= */
+
+function drawCylinder(
+  radius,
+  H
+) {
+
+  const top =
+    circularPoints(
+      radius,
+      H/2
+    );
+
+  const bottom =
+    circularPoints(
+      radius,
+      -H/2
+    );
+
+
+  // Light surface
+
+  ctx.beginPath();
+
+  top.forEach((p,i) => {
+
+    const q =
+      project(p);
+
+    if(i === 0)
+      ctx.moveTo(q.x,q.y);
+    else
+      ctx.lineTo(q.x,q.y);
+
+  });
+
+  ctx.closePath();
+
+  ctx.fillStyle =
+    "rgba(150,150,150,.10)";
+
+  ctx.fill();
+
+
+  // Rings
+
+  for(let i=0;i<top.length;i++){
+
+    const j =
+      (i+1) % top.length;
+
+    drawLine(
+      project(top[i]),
+      project(top[j])
+    );
+
+    drawLine(
+      project(bottom[i]),
+      project(bottom[j])
+    );
+  }
+
+
+  // A few vertical guides
+
+  for(let i=0;i<top.length;i+=8){
+
+    drawLine(
+      project(top[i]),
+      project(bottom[i]),
+      "#455a64",
+      1
+    );
+  }
+
+
+  return {
+    top,
+    bottom
+  };
+}
+
+
+/* =========================================================
+   CONE
+========================================================= */
+
+function drawCone(
+  radius,
+  H
+) {
+
+  const base =
+    circularPoints(
+      radius,
+      -H/2
+    );
+
+  const apex = {
+    x:0,
+    y:H/2,
+    z:0
+  };
+
+
+  // Shaded cone surface
+
+  ctx.beginPath();
+
+  base.forEach((p,i) => {
+
+    const q =
+      project(p);
+
+    if(i === 0)
+      ctx.moveTo(q.x,q.y);
+    else
+      ctx.lineTo(q.x,q.y);
+
+  });
+
+  const apex2 =
+    project(apex);
+
+  ctx.lineTo(
+    apex2.x,
+    apex2.y
+  );
+
+  ctx.closePath();
+
+  ctx.fillStyle =
+    "rgba(120,120,120,.14)";
+
+  ctx.fill();
+
+
+  // Base rim
+
+  for(let i=0;i<base.length;i++){
+
+    const j =
+      (i+1) % base.length;
+
+    drawLine(
+      project(base[i]),
+      project(base[j])
+    );
+  }
+
+
+  // Only outer generators
+
+  for(let i=0;i<base.length;i+=8){
+
+    drawLine(
+      project(base[i]),
+      apex2
+    );
+  }
+
+
+  return {
+    base,
+    apex
+  };
+}
+
+
+/* =========================================================
+   DIMENSION LABEL
+========================================================= */
+
+function addLabel(
+  text,
+  point
+) {
+
+  const p =
+    project(point);
+
+  const label =
+    document.createElement("div");
+
+  label.className =
+    "dimension-label";
+
+  label.textContent =
+    text;
+
+  label.style.left =
+    p.x + "px";
+
+  label.style.top =
+    p.y + "px";
+
+  $("labels").appendChild(label);
+}
+
+
+/* =========================================================
+   DIMENSION DRAWING
+========================================================= */
+
+function drawDimensions() {
+
+  $("labels").innerHTML = "";
+
+  if(!currentShape)
+    return;
+
+
+  /* =========================
+     CUBE
+  ========================= */
+
+  if(currentShape.type === "Cube") {
+
+    const s =
+      currentShape.side;
+
+    const y = s / 2 + 1;
+
+    drawDimensionLine(
+      {
+        x:-s/2,
+        y:-s/2,
+        z:s/2
+      },
+      {
+        x:s/2,
+        y:-s/2,
+        z:s/2
+      }
+    );
+
+    addLabel(
+      `Sisi: ${s} cm`,
+      {
+        x:0,
+        y:-s/2 - 1,
+        z:s/2
+      }
+    );
+  }
+
+
+  /* =========================
+     RECTANGULAR PRISM
+  ========================= */
+
+  if(currentShape.type === "Rectangular Prism") {
+
+    const L =
+      currentShape.length;
+
+    const W =
+      currentShape.width;
+
+    const H =
+      currentShape.height;
+
+
+    // Panjang
+
+    drawDimensionLine(
+      {
+        x:-L/2,
+        y:-H/2-1,
+        z:W/2
+      },
+      {
+        x:L/2,
+        y:-H/2-1,
+        z:W/2
+      }
+    );
+
+    addLabel(
+      `Panjang: ${L} cm`,
+      {
+        x:0,
+        y:-H/2-1.8,
+        z:W/2
+      }
+    );
+
+
+    // Lebar
+
+    drawDimensionLine(
+      {
+        x:L/2+1,
+        y:-H/2-1,
+        z:-W/2
+      },
+      {
+        x:L/2+1,
+        y:-H/2-1,
+        z:W/2
+      }
+    );
+
+    addLabel(
+      `Lebar: ${W} cm`,
+      {
+        x:L/2+1.8,
+        y:-H/2-1,
+        z:0
+      }
+    );
+
+
+    // Tinggi
+
+    drawDimensionLine(
+      {
+        x:L/2+1,
+        y:-H/2,
+        z:W/2
+      },
+      {
+        x:L/2+1,
+        y:H/2,
+        z:W/2
+      }
+    );
+
+    addLabel(
+      `Tinggi: ${H} cm`,
+      {
+        x:L/2+2,
+        y:0,
+        z:W/2
+      }
+    );
+  }
+
+
+  /* =========================
+     PYRAMID
+  ========================= */
+
+  if(currentShape.type === "Pyramid") {
+
+    const L =
+      currentShape.length;
+
+    const W =
+      currentShape.width;
+
+    const H =
+      currentShape.height;
+
+    const baseY =
+      -H/2;
+
+    // Panjang
+
+    drawDimensionLine(
+      {
+        x:-L/2,
+        y:baseY-1,
+        z:W/2
+      },
+      {
+        x:L/2,
+        y:baseY-1,
+        z:W/2
+      }
+    );
+
+    addLabel(
+      `Panjang: ${L} cm`,
+      {
+        x:0,
+        y:baseY-1.8,
+        z:W/2
+      }
+    );
+
+
+    // Lebar
+
+    drawDimensionLine(
+      {
+        x:L/2+1,
+        y:baseY,
+        z:-W/2
+      },
+      {
+        x:L/2+1,
+        y:baseY,
+        z:W/2
+      }
+    );
+
+    addLabel(
+      `Lebar: ${W} cm`,
+      {
+        x:L/2+1.8,
+        y:baseY,
+        z:0
+      }
+    );
+
+
+    // Tinggi
+
+    drawDimensionLine(
+      {
+        x:L/2+1,
+        y:baseY,
+        z:W/2
+      },
+      {
+        x:L/2+1,
+        y:H/2,
+        z:W/2
+      }
+    );
+
+    addLabel(
+      `Tinggi: ${H} cm`,
+      {
+        x:L/2+2,
+        y:0,
+        z:W/2
+      }
+    );
+  }
+
+
+  /* =========================
+     CYLINDER
+  ========================= */
+
+  if(currentShape.type === "Cylinder") {
+
+    const r =
+      currentShape.radius;
+
+    const H =
+      currentShape.height;
+
+
+    // Radius
+
+    drawDimensionLine(
+      {
+        x:0,
+        y:-H/2,
+        z:0
+      },
+      {
+        x:r,
+        y:-H/2,
+        z:0
+      }
+    );
+
+    addLabel(
+      `Jari-jari: ${r} cm`,
+      {
+        x:r/2,
+        y:-H/2-1,
+        z:0
+      }
+    );
+
+
+    // Height
+
+    drawDimensionLine(
+      {
+        x:r+1,
+        y:-H/2,
+        z:0
+      },
+      {
+        x:r+1,
+        y:H/2,
+        z:0
+      }
+    );
+
+    addLabel(
+      `Tinggi: ${H} cm`,
+      {
+        x:r+2,
+        y:0,
+        z:0
+      }
+    );
+  }
+
+
+  /* =========================
+     CONE
+  ========================= */
+
+  if(currentShape.type === "Cone") {
+
+    const r =
+      currentShape.radius;
+
+    const H =
+      currentShape.height;
+
+
+    // Radius
+
+    drawDimensionLine(
+      {
+        x:0,
+        y:-H/2,
+        z:0
+      },
+      {
+        x:r,
+        y:-H/2,
+        z:0
+      }
+    );
+
+    addLabel(
+      `Jari-jari: ${r} cm`,
+      {
+        x:r/2,
+        y:-H/2-1,
+        z:0
+      }
+    );
+
+
+    // Actual vertical height
+
+    drawDimensionLine(
+      {
+        x:r+1,
+        y:-H/2,
+        z:0
+      },
+      {
+        x:r+1,
+        y:H/2,
+        z:0
+      }
+    );
+
+    addLabel(
+      `Tinggi: ${H} cm`,
+      {
+        x:r+2,
+        y:0,
+        z:0
+      }
+    );
+  }
+}
+
+
+/* =========================================================
+   DRAW SCENE
+========================================================= */
+
+function drawScene() {
+
+  const rect =
+    viewport.getBoundingClientRect();
+
+  ctx.clearRect(
+    0,
+    0,
+    rect.width,
+    rect.height
+  );
+
+
+  if(!currentShape)
+    return;
+
+
+  if(currentShape.type === "Cube") {
+
+    const s =
+      currentShape.side;
+
+    drawBox(
+      s,
+      s,
+      s
+    );
+  }
+
+
+  else if(
+    currentShape.type ===
+    "Rectangular Prism"
+  ) {
+
+    drawBox(
+      currentShape.length,
+      currentShape.height,
+      currentShape.width
+    );
+  }
+
+
+  else if(
+    currentShape.type ===
+    "Pyramid"
+  ) {
+
+    drawPyramid(
+      currentShape.length,
+      currentShape.height,
+      currentShape.width
+    );
+  }
+
+
+  else if(
+    currentShape.type ===
+    "Cylinder"
+  ) {
+
+    drawCylinder(
+      currentShape.radius,
+      currentShape.height
+    );
+  }
+
+
+  else if(
+    currentShape.type ===
+    "Cone"
+  ) {
+
+    drawCone(
+      currentShape.radius,
+      currentShape.height
+    );
+  }
+
+
+  // Dimension lines are drawn
+  // after the shape so they stay prominent.
+
+  drawDimensions();
+}
+
+
+/* =========================================================
+   RESET VIEW
+========================================================= */
+
+function resetView() {
+
+  rotationX = -0.45;
+  rotationY = 0.65;
+  zoom = 1;
+
+  drawScene();
+}
+
+
+/* =========================================================
+   POINTER ROTATION
+========================================================= */
+
+viewport.addEventListener(
+  "pointerdown",
+  e => {
+
+    isDragging = true;
+
+    previousPointerX =
+      e.clientX;
+
+    previousPointerY =
+      e.clientY;
+
+    viewport.setPointerCapture(
+      e.pointerId
+    );
+  }
+);
+
+
+viewport.addEventListener(
+  "pointermove",
+  e => {
+
+    if(!isDragging)
+      return;
+
+    const dx =
+      e.clientX -
+      previousPointerX;
+
+    const dy =
+      e.clientY -
+      previousPointerY;
+
+    rotationY +=
+      dx * 0.01;
+
+    rotationX +=
+      dy * 0.01;
+
+    previousPointerX =
+      e.clientX;
+
+    previousPointerY =
+      e.clientY;
+
+    drawScene();
+  }
+);
+
+
+viewport.addEventListener(
+  "pointerup",
+  e => {
+
+    isDragging = false;
+
+    viewport.releasePointerCapture(
+      e.pointerId
+    );
+  }
+);
+
+
+viewport.addEventListener(
+  "pointercancel",
+  () => {
+
+    isDragging = false;
+
+  }
+);
+
+
+/* =========================================================
+   WHEEL ZOOM
+========================================================= */
+
+viewport.addEventListener(
+  "wheel",
+  e => {
+
+    e.preventDefault();
+
+    zoom *=
+      e.deltaY < 0
+        ? 1.08
+        : 0.92;
+
+    zoom =
+      Math.max(
+        0.15,
+        Math.min(2.5, zoom)
+      );
+
+    drawScene();
+
+  },
+  { passive:false }
+);
+
+
+/* =========================================================
+   TOUCH PINCH ZOOM
+========================================================= */
+
+let activePointers =
+  new Map();
+
+let pinchDistance = null;
+
+viewport.addEventListener(
+  "pointerdown",
+  e => {
+
+    activePointers.set(
+      e.pointerId,
+      {
+        x:e.clientX,
+        y:e.clientY
+      }
+    );
+
+    if(activePointers.size === 2) {
+
+      const p =
+        [...activePointers.values()];
+
+      pinchDistance =
+        Math.hypot(
+          p[0].x-p[1].x,
+          p[0].y-p[1].y
+        );
+    }
+  }
+);
+
+
+viewport.addEventListener(
+  "pointermove",
+  e => {
+
+    if(!activePointers.has(
+      e.pointerId
+    ))
+      return;
+
+    activePointers.set(
+      e.pointerId,
+      {
+        x:e.clientX,
+        y:e.clientY
+      }
+    );
+
+    if(activePointers.size === 2) {
+
+      const p =
+        [...activePointers.values()];
+
+      const distance =
+        Math.hypot(
+          p[0].x-p[1].x,
+          p[0].y-p[1].y
+        );
+
+      if(
+        pinchDistance &&
+        distance > 0
+      ) {
+
+        zoom *=
+          distance /
+          pinchDistance;
+
+        zoom =
+          Math.max(
+            0.15,
+            Math.min(2.5, zoom)
+          );
+      }
+
+      pinchDistance =
+        distance;
+
+      drawScene();
+    }
+  }
+);
+
+
+function removePointer(e) {
+
+  activePointers.delete(
+    e.pointerId
+  );
+
+  if(activePointers.size < 2) {
+    pinchDistance = null;
+  }
+}
+
+
+viewport.addEventListener(
+  "pointerup",
+  removePointer
+);
+
+viewport.addEventListener(
+  "pointercancel",
+  removePointer
+);
+
+
+/* =========================================================
+   BUTTON EVENTS
+========================================================= */
+
+$("startButton").addEventListener(
+  "click",
+  startTask
+);
+
+$("checkButton").addEventListener(
+  "click",
+  checkAnswer
+);
+
+$("resetButton").addEventListener(
+  "click",
+  resetView
+);
+
+$("submitButton").addEventListener(
+  "click",
+  submitScore
+);
+
+$("backButton").addEventListener(
+  "click",
+  () => {
+
+    $("finalScreen")
+      .classList.add("hidden");
+
+    $("startScreen")
+      .classList.remove("hidden");
+
+    renderLeaderboard(
+      $("startLeaderboard")
+    );
+  }
+);
+
+
+$("answer").addEventListener(
+  "keydown",
+  e => {
+
+    if(e.key === "Enter") {
+      checkAnswer();
+    }
+
+  }
+);
+
+
+$("studentName").addEventListener(
+  "keydown",
+  e => {
+
+    if(e.key === "Enter") {
+      submitScore();
+    }
+
+  }
+);
+
+
+/* =========================================================
+   WINDOW EVENTS
+========================================================= */
+
+window.addEventListener(
+  "resize",
+  () => {
+
+    resizeCanvas();
+
+    drawScene();
+
+  }
+);
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+async function initializeLeaderboard() {
+
+  scores = await loadScores();
+
+  renderLeaderboard(
+    $("startLeaderboard")
+  );
+
+}
+
+initializeLeaderboard();
+
+resizeCanvas();
+
+</script>
+
+</body>
+</html>
